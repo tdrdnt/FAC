@@ -11,7 +11,7 @@ section .data
 section .text
 extern printf
 global main
-
+ ; comentariu la misto
 main:
     push ebp
     mov ebp, esp
