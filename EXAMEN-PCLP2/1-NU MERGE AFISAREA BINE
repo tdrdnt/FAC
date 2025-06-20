@@ -1,0 +1,116 @@
+%include "printf32.asm"
+
+section .data
+    N dd    5
+    matrix db 1, 2, 3, 4, 5,  \
+              6, 7, 8, 9, 10, \
+              11, 12, 13, 14, 15, \
+              16, 17, 18, 19, 20, \
+              21, 22, 23, 24, 25
+section .text
+extern printf
+global main
+
+main:
+    push ebp
+    mov ebp, esp
+
+    ; TODO a: Print all the elements of the matrix line by line
+    ; separated by a newline
+    mov ecx, [N]
+    xor esi, esi
+print_rows:
+    cmp esi, ecx
+    jge end_print_rows
+    xor edx, edx
+print_cols:
+    cmp edx, ecx
+    jge print_newline
+    mov eax, esi
+    mul ecx
+    add eax, edx
+    movzx eax, byte [matrix + eax]
+    PRINTF32 "%d ", eax
+    inc edx
+    jmp print_cols
+print_newline:
+    PRINTF32 "\n"
+    inc esi
+    jmp print_rows
+end_print_rows:
+
+    ; TODO b: For each row, print the row number together with
+    ; the sum of all elements on that row
+    xor esi, esi
+sum_rows:
+    cmp esi, [N]
+    jge end_sum_rows
+    xor edi, edi
+    xor edx, edx
+sum_line_loop:
+    cmp edx, [N]
+    jge print_line_sum
+    mov eax, esi
+    mul dword [N]
+    add eax, edx
+    movzx eax, byte [matrix + eax]
+    add edi, eax
+    inc edx
+    jmp sum_line_loop
+print_line_sum:
+    push esi
+    push edi
+    PRINTF32 "%d %d\n"
+    inc esi
+    jmp sum_rows
+end_sum_rows:
+
+    ; TODO c: Compute and print the sum of all elements on the main diagonal
+    ; elements on the main diagonal have i = j
+    xor esi, esi
+    xor edi, edi
+sum_diag:
+    cmp esi, [N]
+    jge end_sum_diag
+    mov eax, esi
+    mul dword [N]
+    add eax, esi
+    movzx eax, byte [matrix + eax]
+    add edi, eax
+    inc esi
+    jmp sum_diag
+end_sum_diag:
+    push edi
+    PRINTF32 "%d\n"
+
+    ; TODO d: For each colum, find the maximum value in that column
+    ; and print it
+    xor esi, esi
+max_col_loop:
+    cmp esi, [N]
+    jge end_max_cols
+    xor edx, edx
+    mov edi, 0
+find_max_in_col:
+    cmp edx, [N]
+    jge print_col_max
+    mov eax, edx
+    mul dword [N]
+    add eax, esi
+    movzx eax, byte [matrix + eax]
+    cmp eax, edi
+    jle skip_max
+    mov edi, eax
+skip_max:
+    inc edx
+    jmp find_max_in_col
+print_col_max:
+    push edi
+    PRINTF32 "%d\n"
+    inc esi
+    jmp max_col_loop
+end_max_cols:
+
+    xor eax, eax
+    leave
+    ret
