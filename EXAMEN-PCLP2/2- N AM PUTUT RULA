@@ -1,0 +1,274 @@
+section .data
+    N  dd 6
+    demo_lap1 db "11:34"
+    demo_lap2 db "10:35"
+
+    laps_arr db "10:00", 0, "11:10", 0, "09:34", 0, "14:03", 0, "10:45", 0, "10:20", 0
+    time_fmt db "%d ", 10, 0
+    int_fmt db "%d ", 10, 0
+    time_fmt_str db "%s", 10, 0
+
+section .text
+global main
+extern printf
+
+;TODO a: Implement int time_to_seconds(char *time_str)
+; -> `time_str` is a string representing time in format `MM:SS`.
+;     the string is always valid
+; -> returns the number of seconds in the `time_str`.
+
+time_to_seconds:
+    push ebp
+    mov ebp, esp
+    push esi
+    push edi
+
+    mov esi, [ebp + 8]
+    xor eax, eax
+.next_min_digit:
+    mov bl, [esi]
+    cmp bl, ':'
+    je .done_min
+    sub bl, '0'
+    imul eax, eax, 10
+    add eax, ebx
+    inc esi
+    jmp .next_min_digit
+.done_min:
+    mov edi, eax
+    inc esi
+
+    xor eax, eax
+.next_sec_digit:
+    mov bl, [esi]
+    cmp bl, 0
+    je .done_sec
+    sub bl, '0'
+    imul eax, eax, 10
+    add eax, ebx
+    inc esi
+    jmp .next_sec_digit
+.done_sec:
+    mov ebx, edi
+    imul ebx, 60
+    add eax, ebx
+
+    pop edi
+    pop esi
+    mov esp, ebp
+    pop ebp
+    leave
+    ret
+
+; TODO b: Implement int compare_laps(char *lap1_str, char *lap2_str)
+; `lap1_str` and `lap2_str` are strings representing time in format `MM:SS`.
+; returns 1, if lap1_str is faster than lap2_str
+; returns -1, if lap1_str is slower than lap2_str
+; return 0, if lap1_str is equal to lap2_str
+compare_laps:
+    push ebp
+    mov ebp, esp
+     push esi
+    push edi
+
+    mov esi, [ebp + 8]
+    mov edi, [ebp + 12]
+
+    push esi
+    call time_to_seconds
+    add esp, 4
+    mov ebx, eax
+
+    push edi
+    call time_to_seconds
+    add esp, 4
+
+    cmp ebx, eax
+    jl .lap1_faster
+    jg .lap2_faster
+
+    mov eax, 0
+    jmp .done
+
+.lap1_faster:
+    mov eax, 1
+    jmp .done
+
+.lap2_faster:
+    mov eax, -1
+
+.done:
+    pop edi
+    pop esi
+    mov esp, ebp
+    pop ebp
+
+    leave
+    ret
+
+; TODO c: Implement count_total_time(char *time_str, int len)
+; -> `time_str` is an array of bytes representing times in format `MM:SS`,
+;     separated by `0` (end of string).
+; -> `len` the number of elements in `time_str`.
+; -> return the total time in the array.
+count_total_time:
+    push ebp
+    mov ebp, esp
+     push esi
+    push edi
+    push ebx
+
+    mov esi, [ebp + 8]
+    mov ecx, [ebp + 12]
+    xor eax, eax
+
+.next_lap:
+    cmp ecx, 0
+    je .done
+
+    push esi
+    call time_to_seconds
+    add esp, 4
+    add eax, ebx
+    mov ebx, eax
+
+.next_lap_search_end:
+    mov al, [esi]
+    cmp al, 0
+    je .found_null
+    inc esi
+    jmp .next_lap_search_end
+
+.found_null:
+    inc esi
+    dec ecx
+    jmp .next_lap
+
+.done:
+    mov eax, ebx
+    pop ebx
+    pop edi
+    pop esi
+    mov esp, ebp
+    pop ebp
+
+
+    leave
+    ret
+
+; TODO d: Implement `int count_slower_laps(char *time_arr, int len, char *demo_lap)
+; -> `time_arr` is an array of bytes representing times in format `MM:SS`,
+;     separated by `0` (end of string).
+; -> `len` the number of elements in `time_str`.
+; -> `demo_lap` is a string representing time in format `MM:SS`.
+; -> returns the number of laps in `time_arr` strictly slower than `demo_lap`.
+count_slower_laps:
+    push ebp, 
+    mov ebp, esp
+    push esi
+    push edi
+    push ebx
+
+    mov esi, [ebp + 8]
+    mov ecx, [ebp + 12]
+    mov edi, [ebp + 16]
+
+    push edi
+    call time_to_seconds
+    add esp, 4
+    mov edx, eax
+
+    xor ebx, ebx
+
+.loop:
+    cmp ecx, 0
+    je .done
+
+    push esi
+    call time_to_seconds
+    add esp, 4
+
+    cmp eax, edx
+    jle .skip
+    inc ebx
+
+.skip:
+    mov al, [esi]
+    cmp al, 0
+    je .find_next
+    inc esi
+    jmp .skip
+
+.find_next:
+    inc esi
+    dec ecx
+    jmp .loop
+
+.done:
+    mov eax, ebx
+    pop ebx
+    pop edi
+    pop esi
+    mov esp, ebp
+    pop ebp
+
+
+    leave
+    ret
+
+main:
+    push ebp
+    mov ebp, esp
+
+    ; TODO a: Compute the number of seconds in `demo_lap1` by calling
+    ; `int time_to_seconds(char *time_str)` function.
+    ; print the result using `printf` function
+    push demo_lap1
+    call time_to_seconds
+    add esp, 4
+    push eax
+    push int_fmt
+    call printf
+    add esp, 8
+
+    ; TODO b: Compare `demo_lap2` and `demo_lap1` (in this order) by calling
+    ; `int compare_laps(char *time_str1, char *time_str2)
+    ; print the result using `printf` function
+    push demo_lap1
+    push demo_lap2
+    call compare_laps
+    add esp, 8
+    push eax
+    push int_fmt
+    call printf
+    add esp, 8
+
+    ; TODO c: Compute total workout time for a training session described
+    ; by `laps_arr` using `int count_total_time(char *time_str, int len)`
+    ; print the result using `printf` function
+    push dword [N]
+    push laps_arr
+    call count_total_time
+    add esp, 8
+    push eax
+    push int_fmt
+    call printf
+    add esp, 8
+
+    ; TODO d: Compute the number of strictly slower laps than `demo_lap2` using
+    ; `int count_slower_laps(char *time_arr, int len, char *demo_lap)`
+    ; print the result using `printf` function
+     push demo_lap2
+    push dword [N]
+    push laps_arr
+    call count_slower_laps
+    add esp, 12
+    push eax
+    push int_fmt
+    call printf
+    add esp, 8
+    ; Return 0.
+    xor eax, eax
+    leave
+    ret
+
